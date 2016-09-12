@@ -1,0 +1,231 @@
+---
+
+- name: Running playbook to create WAF ACL
+  hosts: localhost
+  connection: local
+
+  tasks:
+
+  - name: create a WAF ACL
+    waf:
+      waf_type: web_acl
+      name: drupalWaf
+      action: insert
+      metric_name: drupalWaf
+      default_action: allow
+      rules:
+        - name: DrupalRule
+          rule_action: allow
+          rule_priority: 100
+        - name: testRule
+          rule_action: block
+          rule_priority: 200
+      state: present
+    register: waf
+
+  - name: create an IPSET condition and filter for 10.10.0.0/24
+    waf:
+      waf_type: condition
+      type: ip
+      name: ipset1
+      action: insert
+      ip_address: 10.10.0.0/24
+      state: present
+    register: ipset
+
+  # - debug: msg="{{ipset}}"
+
+
+  - name: create a RULE and add some conditions
+    waf:
+      waf_type: rule
+      name: DrupalRule
+      action: insert
+      metric_name: DrupalRule
+      # # allow, block, or count requests based on that IP address
+      # negated: false
+      # allow, block, or count requests based on all IP addresses except 
+      negated: true
+      conditions: 
+        - name: xss-checker
+          type: xss
+        - name: ipset1
+          type: ip       
+      state: present
+    register: rule
+
+  # # - debug: msg="{{rule}}"            
+
+  # - name: create an XSS condition with header filter
+  #   waf:
+  #     waf_type: condition
+  #     type: xss
+  #     name: xss-checker
+  #     action: insert
+  #     field_match: header
+  #     # Only when field_match eq header
+  #     header_data: Referer
+  #     transformation: cmd_line
+  #     state: present
+  #   register: xss
+
+  # # - debug: msg="{{xss}}"        
+
+  # - name: add query_string filter to the XSS condition we created
+  #   waf:
+  #     waf_type: condition
+  #     type: xss
+  #     name: xss-checker
+  #     action: insert
+  #     field_match: query_string
+  #     # Only when field_match eq header
+  #     # header_data: Referer
+  #     transformation: html_entity_decode
+  #     state: present
+  #   register: xss
+
+  # # # - debug: msg="{{xss}}"    
+
+  # - name: create an SQL Injection condition with header filter
+  #   waf:
+  #     waf_type: condition
+  #     type: sql
+  #     name: sqlinject1
+  #     action: insert
+  #     field_match: header
+  #     # Only when HEADER is set
+  #     header_data: Referer
+  #     transformation: none
+  #     state: present
+  #   register: sql_inject    
+
+
+  # - name: create a RULE and add some of our new conditions
+  #   waf:
+  #     waf_type: rule
+  #     name: DrupalRule
+  #     action: insert
+  #     metric_name: DrupalRule
+  #     # # allow, block, or count requests based on that IP address
+  #     # negated: false
+  #     # allow, block, or count requests based on all IP addresses except 
+  #     negated: true
+  #     conditions: 
+  #       - name: xss-checker
+  #         type: xss
+  #       - name: ipset1
+  #         type: ip   
+  #       - name: sqlinject1
+  #         type: sql    
+  #     state: present
+  #   register: rule    
+
+
+################################    
+
+  # # # - debug: msg="{{sql_inject}}"  
+
+  # - name: create a String Match condition with header filter
+  #   waf:
+  #     waf_type: condition
+  #     type: byte
+  #     name: bytematch1
+  #     action: insert
+  #     field_match: header
+  #     # Only when HEADER is set
+  #     header_data: 'User-Agent'
+  #     target_string: bytes
+  #     transformation: none
+  #     positional: contains
+  #     state: present
+  #   register: string_match  
+
+  # # # - debug: msg="{{string_match}}"
+
+  # - name: create a size constraint condition with header filter
+  #   waf:
+  #     waf_type: condition
+  #     type: size
+  #     name: size1
+  #     action: insert
+  #     field_match: body
+  #     # Only when HEADER is set
+  #     header_data: Referer
+  #     # Must be NONE if type is BODY
+  #     transformation: none
+  #     comparison: EQ
+  #     size: 123
+  #     state: present
+  #   register: size_constraint     
+
+  # # - debug: msg="{{size_constraint}}"    
+  
+
+  # - name: create an IPSET condition and filter for 10.10.0.0/24
+  #   waf:
+  #     waf_type: condition
+  #     type: ip
+  #     name: ipset1
+  #     action: insert
+  #     ip_address: 10.10.0.0/24
+  #     state: present
+  #   register: ipset
+
+  # - name: create an IPSET condition and filter for 10.11.0.0/24
+  #   waf:
+  #     waf_type: condition
+  #     type: ip
+  #     name: ipset1
+  #     action: insert
+  #     ip_address: 10.11.0.0/24
+  #     state: present
+  #   register: ipset
+
+  # - name: create an IPSET condition and filter for 10.12.0.0/24
+  #   waf:
+  #     waf_type: condition
+  #     type: ip
+  #     name: ipset1
+  #     action: insert
+  #     ip_address: 10.12.0.0/24
+  #     state: present
+  #   register: ipset
+  
+  # - debug: msg="{{ipset}}" 
+
+
+  # - name: create a RULE and add some conditions
+  #   waf:
+  #     waf_type: rule
+  #     name: my-first-rule
+  #     action: 'INSERT'|'DELETE'
+  #     negated: True|False
+  #     constraint_type: 'IPMatch'|'ByteMatch'|'SqlInjectionMatch'|'SizeConstraint'|'XssMatch'
+  #     constraint_id: 'IPMatch'|'ByteMatch'|'SqlInjectionMatch'|'SizeConstraint'|'XssMatch
+  #     state: present
+  #   register: rule
+
+  # - name: List all WAFs
+  #   waf_facts:
+  #     state: list
+  #   register: waf_list
+
+  # - debug: msg="{{waf_list.wafs}}"  
+
+  # - name: get WAF from name
+  #   waf_facts:
+  #     name: foobar1
+  #     state: get
+  #   register: waf_fact
+
+  # - debug: 
+  #     var: waf_fact.waf
+
+  # - name: delete a WAF ACL
+  #   waf:
+  #     waf_type: web_acl
+  #     name: "{{waf_fact.waf.WebACLId}}"
+  #     state: absent
+  #   register: waf_go
+
+  # - debug: msg="{{waf_go}}"  
